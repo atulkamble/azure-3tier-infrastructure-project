@@ -1,14 +1,18 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.6.0"
 
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.90"
+      version = "~> 4.0"
     }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.6"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
     }
   }
 }
@@ -20,8 +24,7 @@ provider "azurerm" {
       recover_soft_deleted_key_vaults = true
     }
     virtual_machine {
-      delete_os_disk_on_deletion     = true
-      graceful_shutdown              = false
+      delete_os_disk_on_deletion = true
     }
   }
 }

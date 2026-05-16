@@ -113,7 +113,7 @@ variable "tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)
   default = {
-    Project     = "3tier-azure"
-    ManagedBy   = "Terraform"
+    Project   = "3tier-azure"
+    ManagedBy = "Terraform"
   }
 }

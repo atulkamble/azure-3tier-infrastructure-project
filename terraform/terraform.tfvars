@@ -22,7 +22,7 @@ app_vm_size    = "Standard_B2s"
 
 # Azure SQL  (store real values in Key Vault or CI/CD secrets – never hard-code in VCS)
 sql_admin_login    = "azureadmin"
-sql_admin_password = "REPLACE_WITH_STRONG_PASSWORD"   # min 8 chars, upper, lower, digit, special
+sql_admin_password = "REPLACE_WITH_STRONG_PASSWORD" # min 8 chars, upper, lower, digit, special
 sql_database_name  = "appdb"
 sql_sku            = "S0"
 

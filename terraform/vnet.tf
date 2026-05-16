@@ -32,13 +32,8 @@ resource "azurerm_subnet" "db_subnet" {
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = [var.db_subnet_prefix]
 
-  delegation {
-    name = "sql-delegation"
-    service_delegation {
-      name    = "Microsoft.Sql/managedInstances"
-      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    }
-  }
+  # Required for private endpoints to function correctly
+  private_endpoint_network_policies = "Disabled"
 }
 
 resource "azurerm_subnet" "bastion_subnet" {

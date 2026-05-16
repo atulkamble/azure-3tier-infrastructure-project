@@ -1,0 +1,38 @@
+# Terraform – provider binaries and local state (never commit these)
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+crash.log
+crash.*.log
+
+# Lock file IS safe to commit – do not ignore .terraform.lock.hcl
+
+# Sensitive variable overrides (keep terraform.tfvars as a template)
+*.auto.tfvars
+*.auto.tfvars.json
+
+# SSH keys
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ansible
+*.retry

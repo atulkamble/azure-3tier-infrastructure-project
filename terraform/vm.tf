@@ -141,13 +141,12 @@ resource "azurerm_linux_virtual_machine" "app_vm" {
 # Diagnostic Settings – Web VM
 # -----------------------------------------------------------------------
 resource "azurerm_monitor_diagnostic_setting" "web_vm_diag" {
-  name               = "diag-vm-web"
-  target_resource_id = azurerm_linux_virtual_machine.web_vm.id
+  name                       = "diag-vm-web"
+  target_resource_id         = azurerm_linux_virtual_machine.web_vm.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.law.id
 
-  metric {
+  enabled_metric {
     category = "AllMetrics"
-    enabled  = true
   }
 }
 
@@ -155,12 +154,11 @@ resource "azurerm_monitor_diagnostic_setting" "web_vm_diag" {
 # Diagnostic Settings – App VM
 # -----------------------------------------------------------------------
 resource "azurerm_monitor_diagnostic_setting" "app_vm_diag" {
-  name               = "diag-vm-app"
-  target_resource_id = azurerm_linux_virtual_machine.app_vm.id
+  name                       = "diag-vm-app"
+  target_resource_id         = azurerm_linux_virtual_machine.app_vm.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.law.id
 
-  metric {
+  enabled_metric {
     category = "AllMetrics"
-    enabled  = true
   }
 }

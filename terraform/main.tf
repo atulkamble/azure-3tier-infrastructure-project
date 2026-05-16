@@ -27,7 +27,6 @@ resource "azurerm_recovery_services_vault" "backup_vault" {
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   sku                 = "Standard"
-  soft_delete_enabled = true
   tags                = var.tags
 }
 
@@ -83,15 +82,15 @@ resource "random_string" "kv_suffix" {
 }
 
 resource "azurerm_key_vault" "kv" {
-  name                        = "kv-3tier-${random_string.kv_suffix.result}"
-  location                    = azurerm_resource_group.rg.location
-  resource_group_name         = azurerm_resource_group.rg.name
-  tenant_id                   = data.azurerm_client_config.current.tenant_id
-  sku_name                    = "standard"
-  soft_delete_retention_days  = 7
-  purge_protection_enabled    = true
-  enable_rbac_authorization   = true
-  tags                        = var.tags
+  name                       = "kv-3tier-${random_string.kv_suffix.result}"
+  location                   = azurerm_resource_group.rg.location
+  resource_group_name        = azurerm_resource_group.rg.name
+  tenant_id                  = data.azurerm_client_config.current.tenant_id
+  sku_name                   = "standard"
+  soft_delete_retention_days = 7
+  purge_protection_enabled   = true
+  rbac_authorization_enabled = true
+  tags                       = var.tags
 }
 
 # -----------------------------------------------------------------------

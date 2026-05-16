@@ -1,12 +1,6 @@
 # Azure 3-Tier Infrastructure Project
 
-A production-style Azure Infrastructure project suitable for:
-
-* Resume Projects
-* Azure Administrator / Azure Engineer Interviews
-* Azure DevOps Demonstration
-* Corporate Training
-* GitHub Portfolio
+A production-style Azure Infrastructure project:
 
 ---
 

@@ -1,0 +1,20 @@
+# =============================================================================
+# Ansible Inventory – Azure 3-Tier Project
+# =============================================================================
+# Before use:
+#   1. Retrieve the SSH private key from Key Vault:
+#      az keyvault secret show --vault-name <KV_NAME> --name vm-ssh-private-key \
+#        --query value -o tsv > ~/.ssh/3tier_id_rsa && chmod 600 ~/.ssh/3tier_id_rsa
+#   2. Replace the ansible_host values with actual private IPs from Terraform output.
+#   3. Connect through Azure Bastion or an SSH tunnel – VMs have no public IP.
+# =============================================================================
+
+[web]
+vm-web ansible_host=10.0.1.4 ansible_user=azureuser ansible_ssh_private_key_file=~/.ssh/3tier_id_rsa
+
+[app]
+vm-app ansible_host=10.0.2.4 ansible_user=azureuser ansible_ssh_private_key_file=~/.ssh/3tier_id_rsa
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'

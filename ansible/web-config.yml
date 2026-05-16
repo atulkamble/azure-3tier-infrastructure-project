@@ -1,0 +1,136 @@
+---
+# =============================================================================
+# web-config.yml — Ansible playbook for Web Tier configuration
+# Configures NGINX on vm-web with security hardening
+# =============================================================================
+- name: Configure Web Tier (NGINX)
+  hosts: web
+  become: true
+  gather_facts: true
+
+  vars:
+    nginx_worker_processes: auto
+    nginx_worker_connections: 1024
+    app_backend_ip: "{{ hostvars['vm-app']['ansible_host'] | default('10.0.2.4') }}"
+    app_backend_port: 8080
+
+  handlers:
+    - name: reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+
+    - name: restart nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+
+  tasks:
+    # ---------- Package setup ----------
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install NGINX
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: Enable and start NGINX
+      ansible.builtin.service:
+        name: nginx
+        enabled: true
+        state: started
+
+    # ---------- NGINX global config ----------
+    - name: Deploy nginx.conf with performance tuning
+      ansible.builtin.template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+        owner: root
+        group: root
+        mode: "0644"
+        validate: nginx -t -c %s
+      notify: reload nginx
+
+    # ---------- Virtual host ----------
+    - name: Deploy default site config (reverse proxy to App Tier)
+      ansible.builtin.template:
+        src: templates/default_site.conf.j2
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: "0644"
+        validate: bash -c 'nginx -t -c /dev/stdin <<EOF
+          events {}
+          http { include %s; }
+          EOF'
+      notify: reload nginx
+
+    - name: Ensure default site is enabled
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/default
+        dest: /etc/nginx/sites-enabled/default
+        state: link
+      notify: reload nginx
+
+    # ---------- Web content ----------
+    - name: Deploy index.html (modern dashboard)
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../web/index.html"
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: "0644"
+
+    # ---------- Security hardening ----------
+    - name: Remove NGINX version from Server header
+      ansible.builtin.lineinfile:
+        path: /etc/nginx/nginx.conf
+        regexp: '^\s*server_tokens'
+        line: "\tserver_tokens off;"
+        insertafter: 'http {'
+      notify: reload nginx
+
+    - name: Set secure permissions on /var/www/html
+      ansible.builtin.file:
+        path: /var/www/html
+        owner: www-data
+        group: www-data
+        mode: "0755"
+        recurse: true
+
+    # ---------- Firewall (UFW) ----------
+    - name: Install UFW
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+
+    - name: Allow HTTP (80)
+      community.general.ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+
+    - name: Allow SSH from Bastion subnet only
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+        src: "10.0.10.0/27"
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+        policy: deny
+
+    # ---------- Verify ----------
+    - name: Verify NGINX is responding
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}/"
+        status_code: 200
+      register: nginx_check
+      retries: 5
+      delay: 5
+      until: nginx_check.status == 200

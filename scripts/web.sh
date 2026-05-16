@@ -1,0 +1,478 @@
+#!/usr/bin/env bash
+# =============================================================================
+# web.sh — Bootstrap script for Web Tier VM
+# Installs NGINX and deploys the sample web page
+# =============================================================================
+set -euo pipefail
+
+echo "=== [web.sh] Starting Web Tier bootstrap ==="
+
+# ---- System update ----
+apt-get update -y
+apt-get upgrade -y
+
+# ---- Install NGINX ----
+apt-get install -y nginx
+
+# ---- Enable & start NGINX ----
+systemctl enable nginx
+systemctl start nginx
+
+# ---- Deploy modern web dashboard ----
+cat > /var/www/html/index.html <<'HTML'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Azure 3-Tier Infrastructure Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --azure-blue:   #0078d4;
+      --azure-dark:   #004578;
+      --azure-light:  #deecf9;
+      --accent-teal:  #00b4d8;
+      --accent-green: #107c10;
+      --accent-amber: #f7630c;
+      --bg:           #f3f5f9;
+      --sidebar-bg:   #1b1b2f;
+      --sidebar-text: #c8d6e5;
+      --card-bg:      #ffffff;
+      --text-primary: #1a1a2e;
+      --text-muted:   #6b7280;
+      --border:       #e5e7eb;
+      --radius:       12px;
+      --shadow:       0 2px 16px rgba(0,0,0,.08);
+      --shadow-hover: 0 8px 32px rgba(0,120,212,.15);
+      --transition:   .25s ease;
+    }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+           background: var(--bg); color: var(--text-primary); min-height: 100vh; display: flex; }
+    .sidebar { width: 260px; min-height: 100vh; background: var(--sidebar-bg); color: var(--sidebar-text);
+               display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
+    .sidebar-logo { display: flex; align-items: center; gap: 12px; padding: 28px 24px 20px;
+                    border-bottom: 1px solid rgba(255,255,255,.08); }
+    .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--azure-blue), var(--accent-teal));
+                 border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .sidebar-logo h2 { font-size: 15px; font-weight: 600; line-height: 1.3; color: #fff; }
+    .sidebar-logo span { font-size: 11px; color: var(--sidebar-text); opacity: .7; }
+    .sidebar-nav { flex: 1; padding: 16px 0; overflow-y: auto; }
+    .nav-section-title { padding: 14px 24px 6px; font-size: 10px; font-weight: 600;
+                         letter-spacing: .08em; text-transform: uppercase; opacity: .4; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 24px; cursor: pointer;
+                border-left: 3px solid transparent; transition: all var(--transition); font-size: 14px;
+                color: var(--sidebar-text); text-decoration: none; }
+    .nav-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+    .nav-item.active { background: rgba(0,120,212,.2); border-left-color: var(--azure-blue); color: #fff; }
+    .nav-icon { font-size: 17px; width: 22px; text-align: center; }
+    .sidebar-footer { padding: 20px 24px; border-top: 1px solid rgba(255,255,255,.08); font-size: 12px; opacity: .5; }
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 0 32px;
+              height: 64px; display: flex; align-items: center; justify-content: space-between;
+              position: sticky; top: 0; z-index: 50; }
+    .topbar-left h1 { font-size: 18px; font-weight: 600; }
+    .topbar-left p  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .status-pill { display: flex; align-items: center; gap: 7px; padding: 6px 14px;
+                   background: #ecfdf5; color: var(--accent-green); border-radius: 20px;
+                   font-size: 13px; font-weight: 600; }
+    .pulse { width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .5; transform: scale(1.4); }
+    }
+    .topbar-avatar { width: 36px; height: 36px;
+                     background: linear-gradient(135deg, var(--azure-blue), var(--accent-teal));
+                     border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                     color: white; font-weight: 700; font-size: 14px; }
+    .page-body { padding: 32px; flex: 1; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                  gap: 20px; margin-bottom: 32px; }
+    .stat-card { background: var(--card-bg); border-radius: var(--radius); padding: 24px;
+                 box-shadow: var(--shadow); display: flex; align-items: center; gap: 18px;
+                 transition: box-shadow var(--transition), transform var(--transition); }
+    .stat-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+    .stat-icon { width: 52px; height: 52px; border-radius: 14px; display: flex;
+                 align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .stat-info p { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .stat-info h3 { font-size: 22px; font-weight: 700; }
+    .stat-info span { font-size: 12px; color: var(--accent-green); font-weight: 600; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+    .section-card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .section-header { padding: 20px 24px 16px; display: flex; align-items: center;
+                      justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .section-header h2 { font-size: 15px; font-weight: 600; }
+    .section-header p  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .section-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-blue  { background: var(--azure-light); color: var(--azure-blue); }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-amber { background: #fff7ed; color: #9a3412; }
+    .arch-flow { padding: 28px 24px; display: flex; flex-direction: column; align-items: center; }
+    .arch-tier { width: 100%; max-width: 340px;
+                 background: linear-gradient(135deg, var(--azure-blue), var(--azure-dark));
+                 color: white; border-radius: 10px; padding: 16px 20px;
+                 display: flex; align-items: center; gap: 14px;
+                 box-shadow: 0 4px 14px rgba(0,120,212,.3); transition: transform var(--transition); }
+    .arch-tier:hover { transform: scale(1.02); }
+    .arch-tier.tier-app { background: linear-gradient(135deg, #16537e, #0a3a5c); box-shadow: 0 4px 14px rgba(22,83,126,.3); }
+    .arch-tier.tier-db  { background: linear-gradient(135deg, #1e3a5f, #0d2137); box-shadow: 0 4px 14px rgba(30,58,95,.3); }
+    .tier-icon { font-size: 28px; }
+    .tier-info h3 { font-size: 14px; font-weight: 700; }
+    .tier-info p  { font-size: 12px; opacity: .8; margin-top: 2px; }
+    .tier-status { margin-left: auto; display: flex; align-items: center; gap: 6px;
+                   font-size: 12px; font-weight: 600; opacity: .9; }
+    .tier-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+    .arch-arrow { width: 2px; height: 32px; background: linear-gradient(to bottom, var(--azure-blue), transparent);
+                  display: flex; align-items: flex-end; justify-content: center; }
+    .arch-arrow::after { content: '\25BC'; color: var(--azure-blue); font-size: 10px; margin-bottom: -2px; }
+    .services-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 20px 24px; }
+    .service-item { display: flex; align-items: center; gap: 12px; padding: 14px;
+                    border-radius: 10px; border: 1px solid var(--border); transition: all var(--transition); }
+    .service-item:hover { border-color: var(--azure-blue); background: var(--azure-light); }
+    .service-icon { width: 38px; height: 38px; border-radius: 10px; display: flex;
+                    align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .service-info p { font-size: 13px; font-weight: 600; }
+    .service-info span { font-size: 11px; color: var(--text-muted); }
+    .network-table { width: 100%; border-collapse: collapse; }
+    .network-table th { text-align: left; padding: 12px 24px; font-size: 11px; font-weight: 600;
+                        text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted);
+                        background: #f9fafb; border-bottom: 1px solid var(--border); }
+    .network-table td { padding: 14px 24px; font-size: 13px; border-bottom: 1px solid var(--border); }
+    .network-table tr:last-child td { border-bottom: none; }
+    .network-table tr:hover td { background: #f9fafb; }
+    .cidr-chip { display: inline-block; padding: 3px 10px; background: var(--azure-light);
+                 color: var(--azure-blue); border-radius: 6px;
+                 font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; font-weight: 600; }
+    .traffic-flow { padding: 24px; display: flex; align-items: center; overflow-x: auto; padding-bottom: 28px; }
+    .flow-node { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 90px; }
+    .flow-bubble { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center;
+                   justify-content: center; font-size: 26px; box-shadow: 0 3px 12px rgba(0,0,0,.12);
+                   transition: transform var(--transition); }
+    .flow-bubble:hover { transform: scale(1.1); }
+    .flow-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-align: center; }
+    .flow-connector { flex: 1; min-width: 24px; display: flex; flex-direction: column;
+                      align-items: center; gap: 4px; padding-bottom: 22px; }
+    .flow-line { height: 2px; width: 100%;
+                 background: linear-gradient(90deg, var(--azure-blue), var(--accent-teal)); position: relative; }
+    .flow-line::after { content: '\25BA'; position: absolute; right: -5px; top: -7px;
+                        color: var(--accent-teal); font-size: 10px; }
+    .flow-port { font-size: 10px; color: var(--text-muted); font-weight: 600; font-family: monospace; }
+    .page-footer { background: var(--card-bg); border-top: 1px solid var(--border); padding: 16px 32px;
+                   display: flex; align-items: center; justify-content: space-between;
+                   font-size: 12px; color: var(--text-muted); }
+    .footer-tags { display: flex; gap: 8px; }
+    .footer-tag { padding: 3px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-size: 11px; }
+    /* -- Database Tier Live Status -- */
+    .db-grid { display: grid; grid-template-columns: 1fr 1.6fr; gap: 0; }
+    @media (max-width: 900px) { .db-grid { grid-template-columns: 1fr; } }
+    .db-status-panel { padding: 24px; border-right: 1px solid var(--border); }
+    .db-conn-indicator { display: flex; align-items: center; gap: 10px; padding: 16px 20px;
+                         background: #f9fafb; border-radius: 10px; margin-bottom: 20px;
+                         font-size: 15px; font-weight: 600; }
+    .db-conn-dot { width: 12px; height: 12px; border-radius: 50%; background: #d1d5db;
+                   flex-shrink: 0; transition: background .4s; }
+    .db-conn-dot.connected    { background: #22c55e; animation: pulse 2s infinite; }
+    .db-conn-dot.disconnected { background: #ef4444; }
+    .db-meta { display: flex; flex-direction: column; gap: 0; }
+    .db-meta-item { display: flex; justify-content: space-between; align-items: center;
+                    padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .db-meta-item:last-child { border-bottom: none; }
+    .db-meta-label { color: var(--text-muted); }
+    .db-meta-value { font-weight: 600; font-family: monospace; font-size: 12px; }
+    .db-records-panel { padding: 0; }
+    .db-records-header { display: flex; align-items: center; justify-content: space-between;
+                         padding: 16px 24px 12px; font-size: 13px; font-weight: 600;
+                         color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    .db-refresh-btn { padding: 5px 14px; background: var(--azure-blue); color: white;
+                      border: none; border-radius: 6px; font-size: 12px; font-weight: 600;
+                      cursor: pointer; transition: background var(--transition); }
+    .db-refresh-btn:hover { background: var(--azure-dark); }
+    .db-status-tag { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .db-status-tag.active   { background: #dcfce7; color: #166534; }
+    .db-status-tag.inactive { background: #fee2e2; color: #991b1b; }
+    @media (max-width: 768px) {
+      .sidebar { width: 64px; }
+      .sidebar-logo h2, .sidebar-logo span, .nav-item span, .nav-section-title,
+      .sidebar-footer { display: none; }
+      .main { margin-left: 64px; }
+      .page-body { padding: 20px; }
+      .services-grid, .two-col { grid-template-columns: 1fr; }
+      .topbar { padding: 0 20px; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">&#9729;</div>
+      <div><h2>Azure 3-Tier</h2><span>Infrastructure Dashboard</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Overview</div>
+      <a class="nav-item active" href="#"><span class="nav-icon">&#127968;</span><span>Dashboard</span></a>
+      <a class="nav-item" href="#"><span class="nav-icon">&#128202;</span><span>Monitoring</span></a>
+      <a class="nav-item" href="#"><span class="nav-icon">&#128276;</span><span>Alerts</span></a>
+      <div class="nav-section-title">Infrastructure</div>
+      <a class="nav-item" href="#"><span class="nav-icon">&#127760;</span><span>Networking</span></a>
+      <a class="nav-item" href="#"><span class="nav-icon">&#128187;</span><span>Virtual Machines</span></a>
+      <a class="nav-item" href="#"><span class="nav-icon">&#128451;</span><span>Databases</span></a>
+      <a class="nav-item" href="#"><span class="nav-icon">&#128274;</span><span>Security</span></a>
+      <div class="nav-section-title">Operations</div>
+      <a class="nav-item" href="#"><span class="nav-icon">&#128190;</span><span>Backup</span></a>
+      <a class="nav-item" href="#"><span class="nav-icon">&#9881;</span><span>Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">&copy; 2026 Azure 3-Tier Project</div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1>Infrastructure Overview</h1>
+        <p>Resource Group: rg-3tier-project &nbsp;&middot;&nbsp; Region: Central India</p>
+      </div>
+      <div class="topbar-right">
+        <div class="status-pill"><span class="pulse"></span> All Systems Operational</div>
+        <div class="topbar-avatar">AZ</div>
+      </div>
+    </header>
+    <div class="page-body">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#e0f0ff;">&#128187;</div>
+          <div class="stat-info"><p>Virtual Machines</p><h3>2</h3><span>&#8593; Running</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#dcfce7;">&#127760;</div>
+          <div class="stat-info"><p>Subnets</p><h3>4</h3><span>&#8593; Configured</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fef9c3;">&#128451;</div>
+          <div class="stat-info"><p>SQL Databases</p><h3>1</h3><span>&#8593; Online</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fce7f3;">&#128274;</div>
+          <div class="stat-info"><p>NSG Rules Active</p><h3>8</h3><span>&#8593; Secure</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#ede9fe;">&#128190;</div>
+          <div class="stat-info"><p>Backup Policies</p><h3>1</h3><span>&#8593; Daily 02:00 UTC</span></div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="section-card">
+          <div class="section-header">
+            <div><h2>3-Tier Architecture</h2><p>Traffic flow across all tiers</p></div>
+            <span class="section-badge badge-green">Healthy</span>
+          </div>
+          <div class="arch-flow">
+            <div class="arch-tier">
+              <div class="tier-icon">&#127760;</div>
+              <div class="tier-info"><h3>Web Tier</h3><p>NGINX &middot; Ubuntu 22.04 &middot; Standard_B2s</p></div>
+              <div class="tier-status"><span class="tier-dot"></span> Live</div>
+            </div>
+            <div class="arch-arrow"></div>
+            <div class="arch-tier tier-app">
+              <div class="tier-icon">&#9881;</div>
+              <div class="tier-info"><h3>App Tier</h3><p>Node.js &middot; Ubuntu 22.04 &middot; Standard_B2s</p></div>
+              <div class="tier-status"><span class="tier-dot"></span> Live</div>
+            </div>
+            <div class="arch-arrow"></div>
+            <div class="arch-tier tier-db">
+              <div class="tier-icon">&#128451;</div>
+              <div class="tier-info"><h3>Database Tier</h3><p>Azure SQL &middot; Private Endpoint &middot; S0 SKU</p></div>
+              <div class="tier-status"><span class="tier-dot"></span> Live</div>
+            </div>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="section-header">
+            <div><h2>Azure Services</h2><p>Resources deployed in this project</p></div>
+            <span class="section-badge badge-blue">14 Services</span>
+          </div>
+          <div class="services-grid">
+            <div class="service-item"><div class="service-icon" style="background:#e0f0ff;">&#127760;</div><div class="service-info"><p>Virtual Network</p><span>10.0.0.0/16</span></div></div>
+            <div class="service-item"><div class="service-icon" style="background:#dcfce7;">&#9878;</div><div class="service-info"><p>Load Balancer</p><span>Standard &middot; Zone-redundant</span></div></div>
+            <div class="service-item"><div class="service-icon" style="background:#fce7f3;">&#128737;</div><div class="service-info"><p>NSG</p><span>3 groups configured</span></div></div>
+            <div class="service-item"><div class="service-icon" style="background:#fef9c3;">&#128273;</div><div class="service-info"><p>Key Vault</p><span>Secrets managed</span></div></div>
+            <div class="service-item"><div class="service-icon" style="background:#ede9fe;">&#127984;</div><div class="service-info"><p>Azure Bastion</p><span>Secure SSH/RDP</span></div></div>
+            <div class="service-item"><div class="service-icon" style="background:#e0f0ff;">&#128202;</div><div class="service-info"><p>Azure Monitor</p><span>Log Analytics</span></div></div>
+            <div class="service-item"><div class="service-icon" style="background:#fff7ed;">&#128190;</div><div class="service-info"><p>Backup Vault</p><span>Daily retention 7d</span></div></div>
+            <div class="service-item"><div class="service-icon" style="background:#dcfce7;">&#128451;</div><div class="service-info"><p>Azure SQL</p><span>Private endpoint</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="section-card">
+          <div class="section-header">
+            <div><h2>Network Design</h2><p>VNet and subnet configuration</p></div>
+            <span class="section-badge badge-blue">VNet 10.0.0.0/16</span>
+          </div>
+          <table class="network-table">
+            <thead><tr><th>Subnet</th><th>CIDR</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td>web-subnet</td><td><span class="cidr-chip">10.0.1.0/24</span></td><td>Frontend (Web VM)</td></tr>
+              <tr><td>app-subnet</td><td><span class="cidr-chip">10.0.2.0/24</span></td><td>Backend (App VM)</td></tr>
+              <tr><td>db-subnet</td><td><span class="cidr-chip">10.0.3.0/24</span></td><td>Database (SQL PE)</td></tr>
+              <tr><td>AzureBastionSubnet</td><td><span class="cidr-chip">10.0.10.0/27</span></td><td>Bastion Host</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="section-card">
+          <div class="section-header">
+            <div><h2>Traffic Flow</h2><p>Request path from Internet to Database</p></div>
+            <span class="section-badge badge-amber">Port Map</span>
+          </div>
+          <div class="traffic-flow">
+            <div class="flow-node"><div class="flow-bubble" style="background:#e0f0ff;">&#127760;</div><div class="flow-label">Internet</div></div>
+            <div class="flow-connector"><div class="flow-line"></div><div class="flow-port">:80/443</div></div>
+            <div class="flow-node"><div class="flow-bubble" style="background:#deecf9;">&#9878;</div><div class="flow-label">Load<br>Balancer</div></div>
+            <div class="flow-connector"><div class="flow-line"></div><div class="flow-port">:80</div></div>
+            <div class="flow-node"><div class="flow-bubble" style="background:#dbeafe;">&#127760;</div><div class="flow-label">Web VM<br>(NGINX)</div></div>
+            <div class="flow-connector"><div class="flow-line"></div><div class="flow-port">:8080</div></div>
+            <div class="flow-node"><div class="flow-bubble" style="background:#dcfce7;">&#9881;</div><div class="flow-label">App VM<br>(Node.js)</div></div>
+            <div class="flow-connector"><div class="flow-line"></div><div class="flow-port">:1433</div></div>
+            <div class="flow-node"><div class="flow-bubble" style="background:#fef9c3;">&#128451;</div><div class="flow-label">Azure SQL<br>(Private)</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- DB Tier Live Status -->
+      <div class="section-card" style="margin-bottom:28px;">
+        <div class="section-header">
+          <div><h2>&#128451; Database Tier &mdash; Live Status</h2><p>Azure SQL &middot; Private Endpoint &middot; Port 1433 &middot; TLS 1.2</p></div>
+          <span class="section-badge badge-blue" id="db-badge">Checking&hellip;</span>
+        </div>
+        <div class="db-grid">
+          <div class="db-status-panel">
+            <div class="db-conn-indicator">
+              <div class="db-conn-dot" id="db-conn-dot"></div>
+              <span id="db-conn-label">Connecting&hellip;</span>
+            </div>
+            <div class="db-meta">
+              <div class="db-meta-item"><span class="db-meta-label">Server</span><span class="db-meta-value" id="db-server-name">&mdash;</span></div>
+              <div class="db-meta-item"><span class="db-meta-label">Database</span><span class="db-meta-value" id="db-name">&mdash;</span></div>
+              <div class="db-meta-item"><span class="db-meta-label">Server Time (UTC)</span><span class="db-meta-value" id="db-time">&mdash;</span></div>
+              <div class="db-meta-item"><span class="db-meta-label">Endpoint</span><span class="db-meta-value">Private (10.0.3.x)</span></div>
+              <div class="db-meta-item"><span class="db-meta-label">TLS</span><span class="db-meta-value">1.2 minimum</span></div>
+              <div class="db-meta-item"><span class="db-meta-label">SKU</span><span class="db-meta-value">S0 (10 DTUs)</span></div>
+            </div>
+          </div>
+          <div class="db-records-panel">
+            <div class="db-records-header">
+              <span>items table</span>
+              <button class="db-refresh-btn" onclick="loadDbData()">&#8635; Refresh</button>
+            </div>
+            <table class="network-table">
+              <thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Created</th></tr></thead>
+              <tbody id="db-items-body">
+                <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">Loading records&hellip;</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="page-footer">
+      <span>Azure 3-Tier Infrastructure Project &middot; Provisioned with Terraform &middot; Configured with Ansible</span>
+      <div class="footer-tags">
+        <span class="footer-tag">Terraform</span>
+        <span class="footer-tag">Ansible</span>
+        <span class="footer-tag">Azure Monitor</span>
+        <span class="footer-tag">Central India</span>
+      </div>
+    </footer>
+  </div>
+  <script>
+    async function loadDbStatus() {
+      var dot   = document.getElementById('db-conn-dot');
+      var label = document.getElementById('db-conn-label');
+      var badge = document.getElementById('db-badge');
+      try {
+        var r = await fetch('/api/db-status', { signal: AbortSignal.timeout(8000) });
+        var d = await r.json();
+        if (d.connected) {
+          dot.className     = 'db-conn-dot connected';
+          label.textContent = 'Connected to Azure SQL';
+          badge.textContent = 'Connected';
+          badge.className   = 'section-badge badge-green';
+          document.getElementById('db-server-name').textContent = d.server_name || '\u2014';
+          document.getElementById('db-name').textContent        = d.db_name     || '\u2014';
+          document.getElementById('db-time').textContent        =
+            d.server_time ? new Date(d.server_time).toUTCString() : '\u2014';
+        } else {
+          dot.className     = 'db-conn-dot disconnected';
+          label.textContent = 'DB Unreachable \u2014 ' + (d.error || 'unknown error');
+          badge.textContent = 'Unreachable';
+          badge.className   = 'section-badge badge-amber';
+        }
+      } catch (e) {
+        dot.className     = 'db-conn-dot disconnected';
+        label.textContent = 'App API unavailable';
+        badge.textContent = 'Unavailable';
+        badge.className   = 'section-badge badge-amber';
+      }
+    }
+    async function loadItems() {
+      var tbody = document.getElementById('db-items-body');
+      try {
+        var r     = await fetch('/api/items', { signal: AbortSignal.timeout(8000) });
+        var items = await r.json();
+        if (!items.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">No records \u2014 call POST /api/db/setup to initialise schema.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = items.map(function(i) {
+          var tag = i.status === 'active' ? 'active' : 'inactive';
+          var dt  = i.created_at ? new Date(i.created_at).toLocaleDateString() : '\u2014';
+          return '<tr><td>' + i.id + '</td><td>' + i.name + '</td>'
+               + '<td><span class="db-status-tag ' + tag + '">' + i.status + '</span></td>'
+               + '<td>' + dt + '</td></tr>';
+        }).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">Could not reach App API.</td></tr>';
+      }
+    }
+    function loadDbData() { loadDbStatus(); loadItems(); }
+    loadDbData();
+    setInterval(loadDbStatus, 30000);
+  </script>
+</body>
+</html>
+HTML
+
+# ---- Configure NGINX reverse proxy to App Tier ----
+# Replace APP_PRIVATE_IP with the actual private IP of vm-app after deployment
+APP_PRIVATE_IP="${APP_PRIVATE_IP:-10.0.2.4}"
+
+cat > /etc/nginx/sites-available/default <<NGINX_CONF
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    root /var/www/html;
+    index index.html;
+
+    server_name _;
+
+    # Serve static files from web root
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    # Proxy API requests to App Tier
+    location /api/ {
+        proxy_pass         http://${APP_PRIVATE_IP}:8080/;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              \$host;
+        proxy_set_header   X-Real-IP         \$remote_addr;
+        proxy_set_header   X-Forwarded-For   \$proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout    30s;
+    }
+}
+NGINX_CONF
+
+# ---- Reload NGINX with new config ----
+nginx -t && systemctl reload nginx
+
+echo "=== [web.sh] Web Tier bootstrap complete ==="

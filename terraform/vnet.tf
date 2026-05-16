@@ -45,6 +45,44 @@ resource "azurerm_subnet" "bastion_subnet" {
 }
 
 # -----------------------------------------------------------------------
+# -----------------------------------------------------------------------
+# NAT Gateway – outbound internet for web + app subnets
+# (Standard LB disables outbound SNAT; NAT GW provides egress for apt-get etc.)
+# -----------------------------------------------------------------------
+resource "azurerm_public_ip" "nat_pip" {
+  name                = "pip-nat-gw"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  tags                = var.tags
+}
+
+resource "azurerm_nat_gateway" "nat_gw" {
+  name                    = "nat-gw"
+  location                = azurerm_resource_group.rg.location
+  resource_group_name     = azurerm_resource_group.rg.name
+  sku_name                = "Standard"
+  idle_timeout_in_minutes = 10
+  tags                    = var.tags
+}
+
+resource "azurerm_nat_gateway_public_ip_association" "nat_gw_pip" {
+  nat_gateway_id       = azurerm_nat_gateway.nat_gw.id
+  public_ip_address_id = azurerm_public_ip.nat_pip.id
+}
+
+resource "azurerm_subnet_nat_gateway_association" "web_nat" {
+  subnet_id      = azurerm_subnet.web_subnet.id
+  nat_gateway_id = azurerm_nat_gateway.nat_gw.id
+}
+
+resource "azurerm_subnet_nat_gateway_association" "app_nat" {
+  subnet_id      = azurerm_subnet.app_subnet.id
+  nat_gateway_id = azurerm_nat_gateway.nat_gw.id
+}
+
+# -----------------------------------------------------------------------
 # Public IP for Bastion
 # -----------------------------------------------------------------------
 resource "azurerm_public_ip" "bastion_pip" {

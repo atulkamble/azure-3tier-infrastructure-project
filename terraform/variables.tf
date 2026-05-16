@@ -90,12 +90,6 @@ variable "sql_admin_login" {
   sensitive   = true
 }
 
-variable "sql_admin_password" {
-  description = "Administrator password for Azure SQL Server (min 8 chars, upper, lower, digit, special)"
-  type        = string
-  sensitive   = true
-}
-
 variable "sql_database_name" {
   description = "Name of the Azure SQL Database"
   type        = string

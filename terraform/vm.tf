@@ -11,6 +11,8 @@ resource "azurerm_key_vault_secret" "ssh_private_key" {
   name         = "vm-ssh-private-key"
   value        = tls_private_key.ssh_key.private_key_pem
   key_vault_id = azurerm_key_vault.kv.id
+
+  depends_on = [azurerm_role_assignment.kv_secrets_officer]
 }
 
 # -----------------------------------------------------------------------

@@ -94,12 +94,22 @@ resource "azurerm_key_vault" "kv" {
 }
 
 # -----------------------------------------------------------------------
-# Key Vault Secret – SQL password
+# Key Vault RBAC – grant the current caller Secrets Officer so Terraform
+# can write secrets (Key Vault uses Azure RBAC, not access policies)
+# -----------------------------------------------------------------------
+resource "azurerm_role_assignment" "kv_secrets_officer" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+# -----------------------------------------------------------------------
+# Key Vault Secret – SQL password (auto-generated)
 # -----------------------------------------------------------------------
 resource "azurerm_key_vault_secret" "sql_password" {
   name         = "sql-admin-password"
-  value        = var.sql_admin_password
+  value        = random_password.sql_password.result
   key_vault_id = azurerm_key_vault.kv.id
 
-  depends_on = [azurerm_key_vault.kv]
+  depends_on = [azurerm_role_assignment.kv_secrets_officer]
 }

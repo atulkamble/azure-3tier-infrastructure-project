@@ -7,13 +7,24 @@ resource "random_string" "sql_suffix" {
   upper   = false
 }
 
+# Auto-generate a strong password that meets Azure SQL complexity requirements
+resource "random_password" "sql_password" {
+  length           = 20
+  special          = true
+  override_special = "!#%&*()-_=+"
+  min_upper        = 2
+  min_lower        = 2
+  min_numeric      = 2
+  min_special      = 2
+}
+
 resource "azurerm_mssql_server" "sql_server" {
   name                          = "sqlsvr-3tier-${random_string.sql_suffix.result}"
   resource_group_name           = azurerm_resource_group.rg.name
   location                      = azurerm_resource_group.rg.location
   version                       = "12.0"
   administrator_login           = var.sql_admin_login
-  administrator_login_password  = var.sql_admin_password
+  administrator_login_password  = random_password.sql_password.result
   minimum_tls_version           = "1.2"
   public_network_access_enabled = false
   tags                          = var.tags

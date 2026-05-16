@@ -395,17 +395,6 @@ You can integrate with:
 
 ---
 
-# GitHub Repository Name Suggestions
-
-* azure-3tier-infrastructure-project
-* azure-production-infra
-* azure-enterprise-network-project
-* azure-admin-project
-* azure-terraform-3tier
-* azure-ha-infrastructure-project
-
----
-
 # Interview Questions Covered
 
 This project helps answer:
